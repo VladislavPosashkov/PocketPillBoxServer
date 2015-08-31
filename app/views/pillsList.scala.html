@@ -1,0 +1,43 @@
+@()
+
+@template() {
+
+    <div class="row">
+        <div class="col-md-12">
+            <button type="button" class="btn btn-default" data-ng-click="addPill()">+ Add Pill</button>
+        </div>
+    </div>
+    <br/>
+
+    <div class="row">
+        <div class="col-md-12">
+            <table class="table table-bordered">
+
+                <thead>
+                    <tr class="active">
+                        <td>Label</td>
+                        <td>Count</td>
+                        <td>Expiration Date</td>
+                        <td></td>
+                        <td></td>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr data-ng-repeat="field in fields ">
+                        <td>{{field.title}}</td>
+                        <td>{{field.count}}</td>
+                        <td>{{field.expirationDate | date: "yyyy-MM-dd"}}</td>
+                        <td>
+                            <a class="btn btn-default" href="/medication/{{field.medicationId}}">Edit</a>
+                        </td>
+                        <td>
+                            <button type="button" class="btn btn-primary center-block" data-ng-click="delField(field)">
+                                Delete</button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+}

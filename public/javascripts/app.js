@@ -1,21 +1,20 @@
-var app = angular.module('app', ['ngRoute', 'ngWebsocket'])
+var app = angular.module('app', ['ngRoute', 'ngWebsocket', 'ngCookies', 'facebook'])
     .constant("apiUrl", "http://localhost:9000\:9000/api/v1")
     .config(["$routeProvider", function ($routeProvider) {
         return $routeProvider.when("/", {
-            templateUrl: "/views/responseCreate",
-            controller: "ResponsesCollectionController"
-        }).when("/responses", {
-            templateUrl: "/views/responses",
-            controller: "ResponsesController"
-        }).when("/fields", {
-            templateUrl: "/views/fieldsList",
-            controller: "FieldsListController"
+            redirectTo: "/landing"
+        }).when("/landing", {
+            templateUrl: "/views/landing",
+            controller: "LandingController"
+        }).when("/pills", {
+            templateUrl: "/views/pillList",
+            controller: "PillListController"
         }).when("/create", {
-            templateUrl: "/views/fieldCreate",
-            controller: "FieldCreateController"
-        }).when("/field/:id", {
-            templateUrl: "/views/fieldEdit",
-            controller: "FieldEditController"
+            templateUrl: "/views/createPill",
+            controller: "CreatePillController"
+        }).when("/medication/:id", {
+            templateUrl: "/views/editPill",
+            controller: "PillEditController"
         }).when("/success",{
             templateUrl: "/views/success"
         }).otherwise({
@@ -23,42 +22,114 @@ var app = angular.module('app', ['ngRoute', 'ngWebsocket'])
         });
     }
     ]).config([
-        "$locationProvider", function ($locationProvider) {
-            return $locationProvider.html5Mode(true).hashPrefix("!");
+        "$locationProvider", "FacebookProvider", function ($locationProvider, FacebookProvider) {
+            $locationProvider.html5Mode(true).hashPrefix("!");
+            var myAppId = '1461597530818412';
+            FacebookProvider.setAppId('myAppId');
+            FacebookProvider.init(myAppId);
         }
     ]);
 
-app.controller("FieldsListController", ["$scope", "$location", "$http", "$route", function ($scope, $location, $http, $route) {
+app.controller("navController", ["$scope", "$cookieStore", "$location", "$http", "$route", "Facebook", function ($scope, $cookieStore, $location, $http, $route, Facebook) {
+
+    $scope.singOut = function() {
+        $cookieStore.remove("id");
+        $location.path("/");
+    };
+
+}]);
+
+app.controller("LandingController", ["$scope", "$cookieStore", "$location", "$http", "$route", "Facebook", function ($scope, $cookieStore, $location, $http, $route, Facebook) {
+
+    var token = $cookieStore.get("id");
+    if (token) {
+        console.log(token);
+        $location.path("/pills")
+    }
+
+    $scope.user = {};
+
+    var userIsConnected = false;
+
+    Facebook.getLoginStatus(function(response) {
+        if (response.status == 'connected') {
+            userIsConnected = true;
+        }
+    });
+
+    $scope.IntentLogin = function() {
+        if(!userIsConnected) {
+            $scope.login();
+        } else {
+            $scope.me();
+        }
+    };
+
+    $scope.login = function() {
+        Facebook.login(function(response) {
+            if (response.status == 'connected') {
+                $scope.logged = true;
+                $scope.me();
+            }
+
+        });
+    };
+
+    $scope.me = function() {
+        Facebook.api('/me', function(response) {
+            $scope.$apply(function() {
+                $scope.user = response;
+                $cookieStore.put("id",$scope.user.id);
+                $cookieStore.put("name",$scope.user.first_name);
+                $http.post('/api/v1/user', $scope.user).
+                    success(function (data, status, headers, config) {
+                        $location.path('/fields');
+                    }).
+                    error(function (data, status, headers, config) {
+                        $location.path('/fields');
+                    });
+            });
+
+
+
+        });
+    };
+}]);
+
+app.controller("PillListController", ["$scope", "$cookieStore", "$location", "$http", "$route", function ($scope, $cookieStore, $location, $http, $route) {
+    validate($location, $cookieStore);
     $scope.fields = [];
     var load = function(){
-        $http.get("/api/v1/field").
+        $http.get("/api/v1/user/" + $cookieStore.get("id") + "/medication").
             success(function (data, status, headers, config) {
                 $scope.fields = data;
             });
     };
     load();
-    $scope.type = types;
-    $scope.addField = function () {
+
+    $scope.addPill = function () {
         $location.path('/create');
+        console.log("create")
     };
-    $scope.delField = function (field) {
-        $http.delete('/api/v1/field/' + field.id).success($scope.$apply(load()));
+    $scope.delPill = function (field) {
+        $http.delete('/api/v1/medication/' + field.id).success($scope.$apply(load()));
     }
 }]);
 
-app.controller("FieldCreateController", ["$scope", "$location", "$http", function ($scope, $location, $http) {
-    $scope.item = {'required' : 'false','isActive' : 'false'};
-    $scope.types = types;
-    $scope.fieldValues = {};
+app.controller("CreatePillController", ["$scope", "$cookieStore", "$location", "$http", function ($scope, $cookieStore, $location, $http) {
+    validate($location, $cookieStore);
+    $scope.item = {};
+    $scope.item.title = "";
+    $scope.item.count = null;
 
     $scope.cleanValue = function(){
-        $scope.fieldValues = {};
+        $scope.item = {};
     };
 
 
     $scope.save = function () {
-        if ($scope.item.label === "" || $scope.item.type == null) {
-            alert("Label and Type not filled");
+        if ($scope.item.title === "" || $scope.item.count == null) {
+            alert("Title and Count not filled");
             return;
         }
         if ($scope.fieldValues != null){
@@ -67,198 +138,47 @@ app.controller("FieldCreateController", ["$scope", "$location", "$http", functio
             });
             $scope.item.fieldValues = values;
         }
-        $http.post('/api/v1/field', $scope.item).
+        $http.post('/api/v1/user/' + $cookieStore.get("id") + "/medication", $scope.item).
             success(function (data, status, headers, config) {
-                $location.path('/fields');
+                $location.path('/');
             }).
             error(function (data, status, headers, config) {
-                $location.path('/fields');
+                $location.path('/');
             });
     };
 }]);
 
-app.controller("FieldEditController", ["$scope", "$routeParams", "$location", "$http", function ($scope, $routeParams, $location, $http) {
-    $scope.types = types;
+app.controller("PillEditController", ["$scope", "$routeParams", "$location", "$http", function ($scope, $routeParams, $location, $http) {
+    validate($location, $cookieStore);
     $scope.item = null;
 
     $scope.addOption = function(){
       $scope.item.fieldValues.push({'value' : ""});
     };
 
-    $scope.deleteOption = function(id){
-        console.log("id" + id);
-        $scope.item.fieldValues = _.reject($scope.item.fieldValues, function(element){
-            return element.id == id;
-        });
-        $http.delete('/api/v1/deleteFieldOption' + id).success(function() {
-            console.log("ok");
-    });
-    };
-
-    $http.get('/api/v1/field/' + $routeParams.id).success(function (data, status, headers, config) {
+    $http.get('/api/v1/medication/' + $routeParams.id).success(function (data, status, headers, config) {
         if (status > 200) {
-            $location.path("/fields");
+            $location.path("/");
         }
         $scope.item = data;
     }).error(function (data, status, headers, config) {
-        $location.path("/fields");
+        $location.path("/");
     });
     $scope.save = function () {
-        $http.put('/api/v1/field/' + $scope.item.id, $scope.item).
+        $http.put('/api/v1/medication/' + $scope.item.id, $scope.item).
             success(function (data, status, headers, config) {
-                $location.path('/fields');
+                $location.path('/');
             }).
             error(function (data, status, headers, config) {
-                $location.path('/fields');
+                $location.path('/');
             });
     }
 }]);
 
-app.controller("ResponsesCollectionController", ["$scope", "$location", "$http", function ($scope, $location, $http) {
-
-    $scope.fields = [];
-    $scope.form = [];
-
-    $scope.updateCheckbox = function ($event, fieldId, valueId) {
-        var checkbox = $event.target;
-        var action = (checkbox.checked ? 'add' : 'remove');
-
-        var answer = {'field': {'id': parseInt(fieldId)}, 'answer': {'id': parseInt(valueId)}}
-
-        if (checkbox.checked) {
-            $scope.form.push(answer);
-        } else {
-            $scope.form = _.reject($scope.form, function (element) {
-                return element.answer.id === valueId;
-            });
-        }
-    };
-
-    $scope.isSelected = function (valueId) {
-
-        var obj = _.find($scope.form, function (element) {
-            if (!_.has(element.answer, "id")) {
-                return false;
-            }
-            return element.answer.id == valueId
-        });
-        return !_.isUndefined(obj);
-    };
-
-    $scope.updateRadio = function (radioValue) {
-        $scope.form = _.reject($scope.form, function (element) {
-            return element.field.id === radioValue.field.id;
-        });
-        $scope.form.push(radioValue);
-    };
-
-    $scope.submit = function () {
-        $http.post('/api/v1/form', $scope.form);
-        $location.path('/success');
-    };
-
-    $scope.reset = function () {
-        $scope.form = [];
-    };
-
-    $http.get("/api/v1/field").success(function (data, status, headers, config) {
-        $scope.fields = data;
-    });
-}]);
-
-
-app.controller("ResponsesController", ["$scope", "$location", "$http", "$websocket", "$timeout", function ($scope, $location, $http, $websocket,$timeout) {
-    $scope.columns = [];
-    $scope.formData = [];
-
-    $http.get("/api/v1/form").success(function (data, status, headers, config) {
-        if (status > 200) {
-            console.log("No content");
-        } else {
-            $scope.formData = data;
-        }
-    });
-
-    $http.get("/api/v1/field/short").success(function (data, status, headers, config) {
-        if (status > 200) {
-            console.log("No content");
-        } else {
-            $scope.columns = data;
-        }
-    });
-
-    var ws = $websocket.$new({
-        url: 'ws://' + $location.host() + ':' + $location.port() + '/responseWS'
-    });
-
-    ws.$on('$message', function (message) {
-        $scope.$apply(function(){
-            $scope.formData.push(message);
-        });
-    });
-
-    $scope.getColumnValue = function (responses, columnId) {
-        var answers = _.filter(responses, function (element) {
-            return element.field.id == columnId;
-        });
-        var answersArray = _.toArray(answers);
-        var placeholder = "";
-        if (_.isEmpty(answersArray)) {
-            placeholder = "N/A";
-        } else if (answersArray.length == 1) {
-            placeholder = answersArray[0].answer.value;
-        } else {
-            _.each(answersArray, function (element) {
-                placeholder = placeholder + element.answer.value + ";";
-            });
-        }
-        return placeholder;
-    };
-
-}]);
-
-
-app.controller("AdminHeaderController", ["$scope", "$http", "$location", "$websocket", function ($scope, $http, $location, $websocket) {
-    $scope.count = 0;
-
-    $http.get('/api/v1/formcount').success(function (data, status) {
-            $scope.count = parseInt(data);
-    });
-
-    var ws = $websocket.$new({
-        url: 'ws://' + $location.host() + ':' + $location.port() + '/headerWS',
-        reconnect: true
-    });
-
-    ws.$on('$message', function (message) {
-            $scope.$apply(function () {
-                $scope.count++;
-            });
-        });
-}]);
-
-app.directive('customTextSave', function () {
-    return function ($scope, element, attrs) {
-        var index = $scope.form.length;
-        $scope.form[index] = {'field': {'id': parseInt($scope.field.id)}, 'answer': null};
-        $scope.$watch(attrs.ngModel, function (value) {
-            if (value === "") {
-                value = null;
-            }
-            $scope.form[index] = {'field': {'id': parseInt($scope.field.id)}, 'answer': {'value': value}};
-        });
+function validate($location, $cookieStore){
+    var token = $cookieStore.get("id");
+    if (!token) {
+        console.log(token);
+        $location.path("/landing")
     }
-});
-
-app.directive('customSelectSave', function () {
-    return function ($scope, element, attrs) {
-        var index = $scope.form.length;
-        $scope.form[index] = {'field': {'id': parseInt($scope.field.id)}, 'answer': null};
-        $scope.$watch(attrs.ngModel, function (value) {
-            $scope.form[index] = {'field': {'id': parseInt($scope.field.id)}, 'answer': {'id': parseInt(value)}};
-        });
-    }
-});
-
-
-var types = ['SingleLineText', 'Textarea', 'RadioButton', 'CheckBox', 'Combobox'];
+}

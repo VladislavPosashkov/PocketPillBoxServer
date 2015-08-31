@@ -9,7 +9,7 @@ public class MethodUsing {
     @Id
     @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "method_using_generator")
     @Column(name = "method_using_id")
-    private int methodUsingId;
+    private Integer methodUsingId;
 
     @Column(name = "measuring")
     private String measuring;
@@ -23,11 +23,11 @@ public class MethodUsing {
     @Column(name = "receipt_time")
     private String receiptTime;
 
-    public int getMethodUsingId() {
+    public Integer getMethodUsingId() {
         return methodUsingId;
     }
 
-    public void setMethodUsingId(int methodUsingId) {
+    public void setMethodUsingId(Integer methodUsingId) {
         this.methodUsingId = methodUsingId;
     }
 

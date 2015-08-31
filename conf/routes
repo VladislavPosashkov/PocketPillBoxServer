@@ -3,27 +3,39 @@
 # ~~~~
 
 
-GET           /                             controllers.Application.index()
+GET           /                                  controllers.Application.main(any = "none")
+
+# Web route
+
+GET           /views/landing                     controllers.Application.landing()
+GET           /views/pillList                    controllers.Application.pillList()
+GET           /views/createPill                  controllers.Application.createPill()
+GET           /views/editPill                    controllers.Application.editPill()
+
+
+
 
 # RESTFULL API
 
-GET           /api/v1/course                controllers.Courses.getAllCourses
-GET           /api/v1/course/:id            controllers.Courses.getCourse(id: Integer)
-POST          /api/v1/course                controllers.Courses.createCourse()
-PUT           /api/v1/course                controllers.Courses.updateCourse(id: Integer)
-DELETE        /api/v1/course                controllers.Courses.deleteCourse(id: Integer)
+GET           /api/v1/course                     controllers.Courses.getAllCourses
+GET           /api/v1/course/:id                 controllers.Courses.getCourse(id: Integer)
+POST          /api/v1/course                     controllers.Courses.createCourse()
+PUT           /api/v1/course                     controllers.Courses.updateCourse(id: Integer)
+DELETE        /api/v1/course                     controllers.Courses.deleteCourse(id: Integer)
 
-GET           /api/v1/medication            controllers.Medications.getAllMedications
-GET           /api/v1/medication/:id        controllers.Medications.getMedication(id: Integer)
-POST          /api/v1/medication            controllers.Medications.createMedication()
-PUT           /api/v1/medication            controllers.Medications.updateMedication(id: Integer)
-DELETE        /api/v1/medication            controllers.Medications.deleteMedication(id: Integer)
+GET           /api/v1/user/:id/medication        controllers.Medications.getAllMedications(id: String)
+GET           /api/v1/medication/:id             controllers.Medications.getMedication(id: Integer)
+POST          /api/v1/user/:id/medication        controllers.Medications.createMedication(id: String)
+PUT           /api/v1/medication                 controllers.Medications.updateMedication(id: Integer)
+DELETE        /api/v1/medication                 controllers.Medications.deleteMedication(id: Integer)
 
-GET         /api/v1/user            controllers.Users.getAllUsers
-GET         /api/v1/user/:id        controllers.Users.getUser(id: Integer)
-POST        /api/v1/user            controllers.Users.createUser()
-PUT         /api/v1/user            controllers.Users.updateUser(id: Integer)
-DELETE      /api/v1/user            controllers.Users.deleteUser(id: Integer)
+GET           /api/v1/user                       controllers.Users.getAllUsers
+GET           /api/v1/user/:id                   controllers.Users.getUser(id: String)
+POST          /api/v1/user                       controllers.Users.createUser()
+PUT           /api/v1/user                       controllers.Users.updateUser(id: String)
+DELETE        /api/v1/user                       controllers.Users.deleteUser(id: String)
 
 # Map static resources from the /public folder to the /assets URL path
-GET           /assets/*file                 controllers.Assets.at(path="/public", file)
+GET           /assets/*file                      controllers.Assets.at(path="/public", file)
+
+GET           /*any                              controllers.Application.main(any)

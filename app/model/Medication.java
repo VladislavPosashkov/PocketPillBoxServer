@@ -1,5 +1,7 @@
 package model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import javax.persistence.*;
 
 @Entity(name = "medication")
@@ -9,7 +11,13 @@ public class Medication {
     @Id
     @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "medication_generator")
     @Column(name = "medication_id")
-    private int medicationId;
+    private Integer medicationId;
+
+
+    @ManyToOne
+    @JoinColumn (name = "user_id")
+    @JsonIgnore
+    private User owner;
 
     @Column(name = "count")
     private double count;
@@ -20,11 +28,12 @@ public class Medication {
     @Column(name = "expiration_date")
     private String expirationDate;
 
-    public int getMedicationId() {
+
+    public Integer getMedicationId() {
         return medicationId;
     }
 
-    public void setMedicationId(int medicationId) {
+    public void setMedicationId(Integer medicationId) {
         this.medicationId = medicationId;
     }
 
@@ -50,5 +59,13 @@ public class Medication {
 
     public void setExpirationDate(String expirationDate) {
         this.expirationDate = expirationDate;
+    }
+
+    public User getOwner() {
+        return owner;
+    }
+
+    public void setOwner(User owner) {
+        this.owner = owner;
     }
 }

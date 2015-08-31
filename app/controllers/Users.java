@@ -16,7 +16,7 @@ import java.util.List;
 public class Users extends Controller {
 
     @Transactional(readOnly = true)
-    public static Result getUser(Integer id) {
+    public static Result getUser(String id) {
         try {
             Object user = JPA.em().find(User.class, id);
             return ok(Json.toJson(user));
@@ -33,14 +33,22 @@ public class Users extends Controller {
             return badRequest();
         }
 
-        User user = Json.fromJson(json, User.class);
+        User user = new User();
+        user.setFacebookKey(json.get("id").textValue());
+        user.setName(json.get("name").textValue());
+
+        User value = (User) JPA.em().createQuery("select u from pillbox_user u where u.facebookKey = '" + json.get("id").textValue() + "'").getSingleResult();
+        if (value != null) {
+            return ok();
+        }
+
         JPA.em().persist(user);
         return ok();
     }
 
     @Transactional
     @BodyParser.Of(BodyParser.Json.class)
-    public static Result updateUser(Integer id) {
+    public static Result updateUser(String id) {
         JsonNode json = request().body().asJson();
         if (json == null) {
             return badRequest();
@@ -51,7 +59,7 @@ public class Users extends Controller {
     }
 
     @Transactional
-    public static Result deleteUser(Integer id) {
+    public static Result deleteUser(String id) {
         try {
             Object user = JPA.em().find(User.class, id);
             JPA.em().remove(user);

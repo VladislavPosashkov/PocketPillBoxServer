@@ -9,7 +9,7 @@ public class Course {
     @Id
     @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "course_generator")
     @Column(name = "course_id")
-    private int courseId;
+    private Integer courseId;
 
     @OneToOne
     @JoinColumn(name = "medication_id", nullable = false)
@@ -22,11 +22,11 @@ public class Course {
     @Column(name = "start_date")
     private String startDate;
 
-    public int getCourseId() {
+    public Integer getCourseId() {
         return courseId;
     }
 
-    public void setCourseId(int courseId) {
+    public void setCourseId(Integer courseId) {
         this.courseId = courseId;
     }
 
